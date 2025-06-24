@@ -3,7 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 
-void    filter(char *buf, int len, char *filter)
+void	filter(char *buf, int len, char *filter)
 {
 	int	i, j, k;
 	int	match;
@@ -44,15 +44,33 @@ void    filter(char *buf, int len, char *filter)
 
 int	main(int ac, char **av)
 {
-	char	buf[1024];
-	int		read_len;
+	char		buf[1024];
+	char		tmp[2048]; // buffer temporaire = residu + buf
+	char		residue[64]; // taille max d’un filtre raisonnable
+	int			read_len;
+	int			filter_len;
+	int			residue_len = 0;
 
 	if (ac != 2 || strlen(av[1]) == 0)
 		return (1);
+	filter_len = strlen(av[1]);
 
 	while ((read_len = read(0, buf, sizeof(buf))) > 0)
-		filter(buf, read_len, av[1]);
+	{
+		// On copie residue + buf dans tmp
+		memcpy(tmp, residue, residue_len);
+		memcpy(tmp + residue_len, buf, read_len);
 
+		// Appel sur le buffer combiné
+		filter(tmp, residue_len + read_len, av[1]);
+
+		// Met à jour la nouvelle residue (à la fin de buf)
+		if (filter_len - 1 < read_len)
+			memcpy(residue, buf + read_len - (filter_len - 1), filter_len - 1);
+		else
+			memcpy(residue, tmp + residue_len + read_len - (filter_len - 1), filter_len - 1);
+		residue_len = filter_len - 1;
+	}
 	if (read_len < 0)
 	{
 		perror("Error: ");
@@ -60,3 +78,4 @@ int	main(int ac, char **av)
 	}
 	return (0);
 }
+
